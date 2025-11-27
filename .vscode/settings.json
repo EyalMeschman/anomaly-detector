@@ -1,0 +1,14 @@
+{
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go"
+  },
+  "go.formatTool": "goimports",
+  "go.lintTool": "golangci-lint-v2",
+    "go.lintFlags": [
+        "--fast-only"
+    ],
+  "go.lintOnSave": "workspace",
+  "go.vetOnSave": "workspace",
+  "go.testOnSave": true,
+}

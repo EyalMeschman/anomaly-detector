@@ -1,0 +1,39 @@
+version: "2"
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - decorder
+    - dogsled
+    - dupl
+    - durationcheck
+    - errcheck
+    - forbidigo
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - lll
+    - musttag
+    - nestif
+    - nolintlint
+    - reassign
+    - staticcheck
+    - unparam
+    - unused
+    - whitespace
+    - wsl_v5
+  settings:
+    funlen:
+      lines: 120
+      statements: 60
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+      enable:
+        - assign-expr
+        - err
