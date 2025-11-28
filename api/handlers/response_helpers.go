@@ -6,7 +6,6 @@ import (
 	"net/http"
 )
 
-// respondJSON sends a JSON response
 func respondJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -16,7 +15,6 @@ func respondJSON(w http.ResponseWriter, status int, data any) {
 	}
 }
 
-// respondError sends an error response
 func respondError(w http.ResponseWriter, status int, message string, err error) {
 	response := map[string]any{
 		"status":  "error",

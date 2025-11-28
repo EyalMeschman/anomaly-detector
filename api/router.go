@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// NewRouter creates a new HTTP router with all routes
 func NewRouter(
 	modelsHandler *handlers.ModelsHandler,
 	validateHandler *handlers.ValidateHandler,
