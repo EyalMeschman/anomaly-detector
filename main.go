@@ -13,6 +13,7 @@ import (
 
 	"anomaly_detector/config"
 	"anomaly_detector/infrautils"
+	"anomaly_detector/internal/store"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/dig"
@@ -35,8 +36,9 @@ func main() {
 func buildContainer() *dig.Container {
 	c := dig.New()
 
-	// Register configuration
 	infrautils.IocProvideWrapper(c, config.LoadInit)
+
+	infrautils.IocProvideWrapper(c, store.NewModelStore)
 
 	return c
 }
