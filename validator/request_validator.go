@@ -2,7 +2,9 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"anomaly_detector/models"
 )
@@ -82,24 +84,21 @@ func (v *RequestValidator) validateParameters(
 		// Try to match against any of the allowed types
 		typeMatch := false
 
-		var lastError error
-
 		for _, typeName := range modelParam.Types {
 			err := validateType(value, typeName)
 			if err == nil {
 				typeMatch = true
 				break
 			}
-
-			lastError = err
 		}
 
 		// If no type matched, add anomaly
 		if !typeMatch {
+			expectedTypes := strings.Join(modelParam.Types, ", ")
 			anomalies = append(anomalies, models.FieldAnomaly{
 				Location: location,
 				Name:     modelParam.Name,
-				Reason:   "type mismatch: " + lastError.Error(),
+				Reason:   fmt.Sprintf("type mismatch: expected one of [%s], got %T", expectedTypes, value),
 			})
 		}
 	}
