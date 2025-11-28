@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 type Parameter struct {
 	Name     string   `json:"name"`
 	Types    []string `json:"types"`
@@ -16,5 +18,5 @@ type APIModel struct {
 
 // Key returns a unique identifier for this API model
 func (m *APIModel) Key() string {
-	return m.Path + ":" + m.Method
+	return fmt.Sprintf("%s:%s", m.Path, m.Method)
 }
