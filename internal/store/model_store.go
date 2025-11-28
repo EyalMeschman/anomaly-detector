@@ -27,8 +27,6 @@ func NewModelStore() IModelStore {
 }
 
 func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
-	slog.InfoContext(ctx, "Storing model", "path", model.Path, "method", model.Method)
-
 	if model == nil {
 		return fmt.Errorf("model cannot be nil")
 	}
@@ -37,12 +35,15 @@ func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
 		return fmt.Errorf("path and method are required")
 	}
 
+	slog.InfoContext(ctx, "Storing model", "path", model.Path, "method", model.Method)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.models[model.Key()] = model
 
 	slog.InfoContext(ctx, "Model stored", "path", model.Path, "method", model.Method)
+
 	return nil
 }
 
@@ -53,12 +54,14 @@ func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIM
 	defer s.mu.RUnlock()
 
 	key := path + ":" + method
+
 	model, exists := s.models[key]
 	if !exists {
 		return nil, fmt.Errorf("model not found for %s %s", method, path)
 	}
 
 	slog.InfoContext(ctx, "Model retrieved", "path", path, "method", method)
+
 	return model, nil
 }
 
@@ -74,5 +77,6 @@ func (s *ModelStore) GetAll(ctx context.Context) []*models.APIModel {
 	}
 
 	slog.InfoContext(ctx, "All models retrieved")
+
 	return result
 }

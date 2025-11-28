@@ -63,7 +63,8 @@ func TestInMemoryModelStore_Get(t *testing.T) {
 		}
 
 		// Store first
-		store.Store(ctx, tModel)
+		err := store.Store(ctx, tModel)
+		assert.NoError(t, err)
 
 		// Get it back
 		retrieved, err := store.Get(ctx, "/users", "POST")
@@ -94,9 +95,9 @@ func TestInMemoryModelStore_GetAll(t *testing.T) {
 		tModel2 := &models.APIModel{Path: "/users", Method: "POST"}
 		tModel3 := &models.APIModel{Path: "/products", Method: "GET"}
 
-		store.Store(ctx, tModel1)
-		store.Store(ctx, tModel2)
-		store.Store(ctx, tModel3)
+		assert.NoError(t, store.Store(ctx, tModel1))
+		assert.NoError(t, store.Store(ctx, tModel2))
+		assert.NoError(t, store.Store(ctx, tModel3))
 
 		// Get all
 		allModels := store.GetAll(ctx)
