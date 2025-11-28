@@ -4,23 +4,19 @@ import (
 	"context"
 	"log/slog"
 
-	"anomaly_detector/internal/models"
+	"anomaly_detector/models"
 )
 
-// IRequestValidator defines the interface for validating requests against API models
 type IRequestValidator interface {
 	Validate(ctx context.Context, req *models.Request, model *models.APIModel) *models.ValidationResult
 }
 
-// RequestValidator orchestrates validation of entire requests
 type RequestValidator struct{}
 
-// NewRequestValidator creates a new request validator
 func NewRequestValidator() IRequestValidator {
 	return &RequestValidator{}
 }
 
-// Validate validates a request against an API model
 func (v *RequestValidator) Validate(
 	ctx context.Context, req *models.Request, model *models.APIModel) *models.ValidationResult {
 	slog.DebugContext(ctx, "Starting request validation",
@@ -53,7 +49,6 @@ func (v *RequestValidator) Validate(
 	return result
 }
 
-// validateParameters validates a set of request parameters against model parameters
 func (v *RequestValidator) validateParameters(
 	requestParams []models.RequestParam,
 	modelParams []models.Parameter,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"anomaly_detector/internal/models"
+	"anomaly_detector/models"
 
 	"github.com/stretchr/testify/assert"
 )

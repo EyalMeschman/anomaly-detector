@@ -13,7 +13,7 @@ import (
 
 	"anomaly_detector/config"
 	"anomaly_detector/infrautils"
-	"anomaly_detector/internal/store"
+	"anomaly_detector/store"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/dig"

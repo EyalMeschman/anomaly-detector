@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"anomaly_detector/internal/models"
+	"anomaly_detector/models"
 )
 
 type IModelStore interface {
