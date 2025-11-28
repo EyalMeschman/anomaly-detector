@@ -50,7 +50,7 @@ func (s *ModelStore) StoreAll(ctx context.Context, models []*models.APIModel) (i
 
 	for _, model := range models {
 		if err := s.Store(ctx, model); err != nil {
-			return storedCount, err
+			continue
 		}
 
 		storedCount++

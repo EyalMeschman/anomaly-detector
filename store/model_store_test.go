@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInMemoryModelStore_Store(t *testing.T) {
+func TestStore(t *testing.T) {
 	t.Run("success storing valid model", func(t *testing.T) {
 		ctx := context.Background()
 		store := NewModelStore()
@@ -53,7 +53,7 @@ func TestInMemoryModelStore_Store(t *testing.T) {
 	})
 }
 
-func TestInMemoryModelStore_Get(t *testing.T) {
+func TestGet(t *testing.T) {
 	t.Run("success getting existing model", func(t *testing.T) {
 		ctx := context.Background()
 		store := NewModelStore()
@@ -85,7 +85,7 @@ func TestInMemoryModelStore_Get(t *testing.T) {
 	})
 }
 
-func TestInMemoryModelStore_StoreAll(t *testing.T) {
+func TestStoreAll(t *testing.T) {
 	t.Run("success storing multiple models", func(t *testing.T) {
 		ctx := context.Background()
 		tStore := NewModelStore()
