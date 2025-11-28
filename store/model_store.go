@@ -11,8 +11,8 @@ import (
 
 type IModelStore interface {
 	Store(ctx context.Context, model *models.APIModel) error
+	StoreAll(ctx context.Context, models []*models.APIModel) (int, error)
 	Get(ctx context.Context, path, method string) (*models.APIModel, error)
-	GetAll(ctx context.Context) []*models.APIModel
 }
 
 type ModelStore struct {
@@ -35,8 +35,6 @@ func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
 		return fmt.Errorf("path and method are required")
 	}
 
-	slog.InfoContext(ctx, "Storing model", "path", model.Path, "method", model.Method)
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -45,6 +43,20 @@ func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
 	slog.InfoContext(ctx, "Model stored", "path", model.Path, "method", model.Method)
 
 	return nil
+}
+
+func (s *ModelStore) StoreAll(ctx context.Context, models []*models.APIModel) (int, error) {
+	storedCount := 0
+
+	for _, model := range models {
+		if err := s.Store(ctx, model); err != nil {
+			return storedCount, err
+		}
+
+		storedCount++
+	}
+
+	return storedCount, nil
 }
 
 func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIModel, error) {
@@ -63,20 +75,4 @@ func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIM
 	slog.InfoContext(ctx, "Model retrieved", "path", path, "method", method)
 
 	return model, nil
-}
-
-func (s *ModelStore) GetAll(ctx context.Context) []*models.APIModel {
-	slog.InfoContext(ctx, "Getting all models")
-
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	result := make([]*models.APIModel, 0, len(s.models))
-	for _, model := range s.models {
-		result = append(result, model)
-	}
-
-	slog.InfoContext(ctx, "All models retrieved")
-
-	return result
 }

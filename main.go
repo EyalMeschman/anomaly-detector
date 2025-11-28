@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"anomaly_detector/api"
+	"anomaly_detector/api/handlers"
 	"anomaly_detector/config"
 	"anomaly_detector/infrautils"
 	"anomaly_detector/store"
@@ -36,9 +38,18 @@ func main() {
 func buildContainer() *dig.Container {
 	c := dig.New()
 
+	// Register configuration
 	infrautils.IocProvideWrapper(c, config.LoadInit)
 
+	// Register store
 	infrautils.IocProvideWrapper(c, store.NewModelStore)
+
+	// Register handlers
+	infrautils.IocProvideWrapper(c, handlers.NewModelsHandler)
+	infrautils.IocProvideWrapper(c, handlers.NewValidateHandler)
+
+	// Register router
+	infrautils.IocProvideWrapper(c, api.NewRouter)
 
 	return c
 }

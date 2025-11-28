@@ -85,31 +85,68 @@ func TestInMemoryModelStore_Get(t *testing.T) {
 	})
 }
 
-func TestInMemoryModelStore_GetAll(t *testing.T) {
-	t.Run("success getting all models", func(t *testing.T) {
+func TestInMemoryModelStore_StoreAll(t *testing.T) {
+	t.Run("success storing multiple models", func(t *testing.T) {
 		ctx := context.Background()
-		store := NewModelStore()
+		tStore := NewModelStore()
 
-		// Store 3 models
-		tModel1 := &models.APIModel{Path: "/users", Method: "GET"}
-		tModel2 := &models.APIModel{Path: "/users", Method: "POST"}
-		tModel3 := &models.APIModel{Path: "/products", Method: "GET"}
+		tModels := []*models.APIModel{
+			{Path: "/users", Method: "GET"},
+			{Path: "/users", Method: "POST"},
+			{Path: "/products", Method: "GET"},
+		}
 
-		assert.NoError(t, store.Store(ctx, tModel1))
-		assert.NoError(t, store.Store(ctx, tModel2))
-		assert.NoError(t, store.Store(ctx, tModel3))
+		tCount, tErr := tStore.StoreAll(ctx, tModels)
 
-		// Get all
-		allModels := store.GetAll(ctx)
-		assert.Len(t, allModels, 3)
+		assert.NoError(t, tErr)
+		assert.Equal(t, 3, tCount)
+
+		// Verify all models were stored by retrieving them individually
+		_, err := tStore.Get(ctx, "/users", "GET")
+		assert.NoError(t, err)
+
+		_, err = tStore.Get(ctx, "/users", "POST")
+		assert.NoError(t, err)
+
+		_, err = tStore.Get(ctx, "/products", "GET")
+		assert.NoError(t, err)
 	})
 
-	t.Run("returns empty slice when no models", func(t *testing.T) {
+	t.Run("partial success with invalid models", func(t *testing.T) {
 		ctx := context.Background()
-		store := NewModelStore()
+		tStore := NewModelStore()
 
-		allModels := store.GetAll(ctx)
-		assert.NotNil(t, allModels)
-		assert.Len(t, allModels, 0)
+		tModels := []*models.APIModel{
+			{Path: "/users", Method: "GET"},
+			{Path: "", Method: "POST"}, // Invalid - empty path
+			{Path: "/products", Method: "GET"},
+		}
+
+		tCount, tErr := tStore.StoreAll(ctx, tModels)
+
+		assert.NoError(t, tErr)
+		assert.Equal(t, 2, tCount) // Only 2 valid models stored
+
+		// Verify only valid models were stored
+		_, err := tStore.Get(ctx, "/users", "GET")
+		assert.NoError(t, err)
+
+		_, err = tStore.Get(ctx, "/products", "GET")
+		assert.NoError(t, err)
+		// Invalid model should not be stored
+		_, err = tStore.Get(ctx, "", "POST")
+		assert.Error(t, err)
+	})
+
+	t.Run("empty slice returns zero", func(t *testing.T) {
+		ctx := context.Background()
+		tStore := NewModelStore()
+
+		tModels := []*models.APIModel{}
+
+		tCount, tErr := tStore.StoreAll(ctx, tModels)
+
+		assert.NoError(t, tErr)
+		assert.Equal(t, 0, tCount)
 	})
 }
