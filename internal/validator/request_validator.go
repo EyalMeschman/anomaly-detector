@@ -27,6 +27,7 @@ func (v *RequestValidator) Validate(
 		"path", req.Path,
 		"method", req.Method,
 	)
+
 	result := &models.ValidationResult{
 		IsAnomalous:     false,
 		AnomalousFields: []models.FieldAnomaly{},
