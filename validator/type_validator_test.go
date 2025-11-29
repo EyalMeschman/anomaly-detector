@@ -59,6 +59,8 @@ func TestValidateType(t *testing.T) {
 	runTypeTests(t, models.TypeDate, []typeTestCase{
 		{name: "valid date", inputValue: "12-01-2022", isErr: false},
 		{name: "valid date", inputValue: "31-12-2023", isErr: false},
+		{name: "invalid day", inputValue: "67-12-2023", isErr: true},
+		{name: "invalid month", inputValue: "14-45-2023", isErr: true},
 		{name: "invalid format", inputValue: "2022-01-12", isErr: true},
 		{name: "invalid type", inputValue: 123, isErr: true},
 	})

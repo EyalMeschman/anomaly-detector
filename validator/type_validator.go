@@ -9,7 +9,7 @@ import (
 
 var (
 	// Date format: dd-mm-yyyy
-	dateRegex = regexp.MustCompile(`^\d{2}-\d{2}-\d{4}$`)
+	dateRegex = regexp.MustCompile(`^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$`)
 	// Email format: simplified RFC 5321
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	// UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
