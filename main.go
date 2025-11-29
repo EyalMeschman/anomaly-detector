@@ -44,7 +44,7 @@ func buildContainer() *dig.Container {
 
 	// Register server components
 	infrautils.IocProvideWrapper(c, server.NewHTTPServer)
-	infrautils.IocProvideWrapper(c, server.NewHealthCheckServer)
+	infrautils.IocProvideWrapper(c, server.NewHealthcheckServer)
 
 	// Register store
 	infrautils.IocProvideWrapper(c, store.NewModelStore)

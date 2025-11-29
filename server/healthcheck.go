@@ -17,14 +17,14 @@ type IHealthcheckServer interface {
 	Shutdown(ctx context.Context) error
 }
 
-type HealthcheckServer struct {
+type healthcheckServer struct {
 	cfg    *config.InitConfig
 	server *http.Server
 }
 
-// NewHealthCheckServer creates a lightweight HTTP server for health checks only
-func NewHealthCheckServer(cfg *config.InitConfig) IHealthcheckServer {
-	return &HealthcheckServer{
+// NewHealthcheckServer creates a lightweight HTTP server for health checks only
+func NewHealthcheckServer(cfg *config.InitConfig) IHealthcheckServer {
+	return &healthcheckServer{
 		cfg:    cfg,
 		server: NewHTTPHealthServer(cfg.HealthcheckPort),
 	}
@@ -47,20 +47,20 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *HealthcheckServer) ListenAndServe() error {
+func (hs *healthcheckServer) ListenAndServe() error {
 	http.HandleFunc("/health", healthHandler)
 
-	slog.Info("Healthcheck server is listening on", "port", h.cfg.HealthcheckPort)
+	slog.Info("Healthcheck server is listening on", "port", hs.cfg.HealthcheckPort)
 
-	if err := h.server.ListenAndServe(); err != http.ErrServerClosed {
+	if err := hs.server.ListenAndServe(); err != http.ErrServerClosed {
 		return fmt.Errorf("error while running healthcheck server: %w", err)
 	}
 
 	return nil
 }
 
-func (h *HealthcheckServer) Shutdown(ctx context.Context) error {
-	if err := h.server.Shutdown(ctx); err != nil {
+func (hs *healthcheckServer) Shutdown(ctx context.Context) error {
+	if err := hs.server.Shutdown(ctx); err != nil {
 		return err
 	}
 

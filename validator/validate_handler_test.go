@@ -37,7 +37,7 @@ func TestValidateRequests(t *testing.T) {
 	tStoreMock := store.NewMockIModelStore(t)
 	tValidatorMock := NewMockIRequestValidator(t)
 
-	tHandler := &ValidateHandler{
+	tHandler := &validateHandler{
 		store:     tStoreMock,
 		validator: tValidatorMock,
 	}
@@ -107,7 +107,7 @@ func TestValidateRequests(t *testing.T) {
 
 		err := json.NewDecoder(tRecorder.Body).Decode(&response)
 		assert.NoError(t, err)
-		assert.Equal(t, "no model found for endpoint", response["error"])
+		assert.Equal(t, "no model found for endpoint GET /nonexistent", response["error"])
 	})
 
 	t.Run("error with invalid JSON", func(t *testing.T) {
@@ -123,6 +123,6 @@ func TestValidateRequests(t *testing.T) {
 
 		err := json.NewDecoder(tRecorder.Body).Decode(&response)
 		assert.NoError(t, err)
-		assert.Equal(t, "invalid JSON", response["error"])
+		assert.Equal(t, "invalid JSON provided", response["error"])
 	})
 }

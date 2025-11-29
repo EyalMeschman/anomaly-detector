@@ -33,7 +33,7 @@ var (
 func TestStoreAllModels(t *testing.T) {
 	tStoreMock := NewMockIModelStore(t)
 
-	tHandler := &StoreHandler{
+	tHandler := &storeHandler{
 		store: tStoreMock,
 	}
 
@@ -45,7 +45,7 @@ func TestStoreAllModels(t *testing.T) {
 
 		tStoreMock.EXPECT().
 			StoreAll(ctx, tApiModels).
-			Return(nil).Once()
+			Return(true, nil).Once()
 
 		tHandler.Handle(tRecorder, httpRequest)
 
@@ -73,7 +73,7 @@ func TestStoreAllModels(t *testing.T) {
 		assert.Equal(t, "invalid JSON", response["error"])
 	})
 
-	t.Run("error when store fails", func(t *testing.T) {
+	t.Run("bad request error", func(t *testing.T) {
 		ctx := context.Background()
 		body, _ := json.Marshal(tApiModels)
 		httpRequest := httptest.NewRequest(http.MethodPost, tModelsPath, bytes.NewReader(body))
@@ -81,7 +81,28 @@ func TestStoreAllModels(t *testing.T) {
 
 		tStoreMock.EXPECT().
 			StoreAll(ctx, tApiModels).
-			Return(assert.AnError).Once()
+			Return(true, assert.AnError).Once()
+
+		tHandler.Handle(tRecorder, httpRequest)
+
+		assert.Equal(t, http.StatusBadRequest, tRecorder.Code)
+
+		var response map[string]any
+
+		err := json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.NoError(t, err)
+		assert.Equal(t, "assert.AnError general error for testing", response["error"])
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		ctx := context.Background()
+		body, _ := json.Marshal(tApiModels)
+		httpRequest := httptest.NewRequest(http.MethodPost, tModelsPath, bytes.NewReader(body))
+		tRecorder := httptest.NewRecorder()
+
+		tStoreMock.EXPECT().
+			StoreAll(ctx, tApiModels).
+			Return(false, assert.AnError).Once()
 
 		tHandler.Handle(tRecorder, httpRequest)
 

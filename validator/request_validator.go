@@ -4,47 +4,60 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"anomaly_detector/models"
+)
+
+const (
+	cFieldQueryParams = "query_params"
+	cFieldHeaders     = "headers"
+	cFieldBody        = "body"
 )
 
 type IRequestValidator interface {
 	Validate(ctx context.Context, req *models.Request, model *models.APIModel) []*models.FieldAnomaly
 }
 
-type RequestValidator struct{}
+type requestValidator struct{}
 
 func NewRequestValidator() IRequestValidator {
-	return &RequestValidator{}
+	return &requestValidator{}
 }
 
-func (v *RequestValidator) Validate(
+func (rv *requestValidator) Validate(
 	ctx context.Context, req *models.Request, model *models.APIModel) []*models.FieldAnomaly {
 	slog.DebugContext(ctx, "Starting request validation",
 		"path", req.Path,
 		"method", req.Method,
 	)
 
-	anomalies := []*models.FieldAnomaly{}
+	var (
+		anomalies []*models.FieldAnomaly
+		wg        sync.WaitGroup
+	)
 
-	// Validate query parameters
-	anomalies = append(anomalies, v.validateParameters(req.QueryParams, model.QueryParams, "query_params")...)
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.QueryParams, model.QueryParams, cFieldQueryParams)...)
+	})
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.Headers, model.Headers, cFieldHeaders)...)
+	})
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.Body, model.Body, cFieldBody)...)
+	})
 
-	// Validate headers
-	anomalies = append(anomalies, v.validateParameters(req.Headers, model.Headers, "headers")...)
-
-	// Validate body
-	anomalies = append(anomalies, v.validateParameters(req.Body, model.Body, "body")...)
+	wg.Wait()
 
 	return anomalies
 }
 
-func (v *RequestValidator) validateParameters(
+func (rv *requestValidator) validateParameters(
 	requestParams []*models.RequestParam,
 	modelParams []*models.Parameter,
 	field string,
 ) []*models.FieldAnomaly {
-	anomalies := []*models.FieldAnomaly{}
+	var anomalies []*models.FieldAnomaly
 
 	// Build map of request parameters for quick lookup
 	requestMap := make(map[string]any, len(requestParams))
@@ -52,11 +65,8 @@ func (v *RequestValidator) validateParameters(
 		requestMap[rp.Name] = rp.Value
 	}
 
-	// Validate each model parameter
 	for _, modelParam := range modelParams {
 		value, exists := requestMap[modelParam.Name]
-
-		// Check if required parameter is missing
 		if !exists {
 			if modelParam.Required {
 				anomalies = append(anomalies, &models.FieldAnomaly{
@@ -69,7 +79,6 @@ func (v *RequestValidator) validateParameters(
 			continue
 		}
 
-		// Try to match against any of the allowed types
 		typeMatch := false
 
 		for _, typeName := range modelParam.Types {
@@ -79,7 +88,6 @@ func (v *RequestValidator) validateParameters(
 			}
 		}
 
-		// If no type matched, add anomaly
 		if !typeMatch {
 			anomalies = append(anomalies, &models.FieldAnomaly{
 				Field:         field,

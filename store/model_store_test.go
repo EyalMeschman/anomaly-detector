@@ -19,8 +19,9 @@ func TestGet(t *testing.T) {
 		}
 
 		// Store first using StoreAll
-		err := store.StoreAll(ctx, []*models.APIModel{tModel})
+		ok, err := store.StoreAll(ctx, []*models.APIModel{tModel})
 		assert.NoError(t, err)
+		assert.True(t, ok)
 
 		// Get it back
 		retrieved, err := store.Get(ctx, "/users", "POST")
@@ -49,9 +50,10 @@ func TestStoreAll(t *testing.T) {
 		ctx := context.Background()
 		tStore := NewModelStore()
 
-		tErr := tStore.StoreAll(ctx, tModels)
+		ok, tErr := tStore.StoreAll(ctx, tModels)
 
 		assert.NoError(t, tErr)
+		assert.True(t, ok)
 	})
 
 	t.Run("empty slice succeeds", func(t *testing.T) {
@@ -60,8 +62,9 @@ func TestStoreAll(t *testing.T) {
 
 		tModels := []*models.APIModel{}
 
-		err := tStore.StoreAll(ctx, tModels)
+		ok, err := tStore.StoreAll(ctx, tModels)
 		assert.NoError(t, err)
+		assert.True(t, ok)
 	})
 
 	t.Run("fail on nil model", func(t *testing.T) {
@@ -71,8 +74,9 @@ func TestStoreAll(t *testing.T) {
 		invalidModels := tModels
 		invalidModels = append(invalidModels, nil) // Nil model
 
-		err := tStore.StoreAll(ctx, invalidModels)
+		ok, err := tStore.StoreAll(ctx, invalidModels)
 		assert.Error(t, err)
+		assert.True(t, ok)
 	})
 
 	t.Run("fail on empty path", func(t *testing.T) {
@@ -82,8 +86,9 @@ func TestStoreAll(t *testing.T) {
 		invalidModels := tModels
 		invalidModels = append(invalidModels, &models.APIModel{Path: "", Method: "POST"})
 
-		err := tStore.StoreAll(ctx, invalidModels)
+		ok, err := tStore.StoreAll(ctx, invalidModels)
 		assert.Error(t, err)
+		assert.True(t, ok)
 	})
 
 	t.Run("fail on empty method", func(t *testing.T) {
@@ -93,8 +98,9 @@ func TestStoreAll(t *testing.T) {
 		invalidModels := tModels
 		invalidModels = append(invalidModels, &models.APIModel{Path: "path", Method: ""})
 
-		err := tStore.StoreAll(ctx, invalidModels)
+		ok, err := tStore.StoreAll(ctx, invalidModels)
 		assert.Error(t, err)
+		assert.True(t, ok)
 	})
 
 	t.Run("fail on duplicate model", func(t *testing.T) {
@@ -105,15 +111,17 @@ func TestStoreAll(t *testing.T) {
 		firstBatch := []*models.APIModel{
 			{Path: "/users", Method: "GET"},
 		}
-		err := tStore.StoreAll(ctx, firstBatch)
+		ok, err := tStore.StoreAll(ctx, firstBatch)
 		assert.NoError(t, err)
+		assert.True(t, ok)
 
 		// Try to store duplicate
 		secondBatch := []*models.APIModel{
 			{Path: "/products", Method: "GET"},
 			{Path: "/users", Method: "GET"}, // Duplicate
 		}
-		err = tStore.StoreAll(ctx, secondBatch)
+		ok, err = tStore.StoreAll(ctx, secondBatch)
 		assert.Error(t, err)
+		assert.True(t, ok)
 	})
 }

@@ -13,15 +13,15 @@ type IStoreHandler interface {
 	api.IHandler
 }
 
-type StoreHandler struct {
+type storeHandler struct {
 	store IModelStore
 }
 
 func NewStoreHandler(store IModelStore) IStoreHandler {
-	return &StoreHandler{store: store}
+	return &storeHandler{store: store}
 }
 
-func (h *StoreHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *storeHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var apiModels []*models.APIModel
@@ -30,16 +30,18 @@ func (h *StoreHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.store.StoreAll(ctx, apiModels)
+	ok, err := h.store.StoreAll(ctx, apiModels)
 	if err != nil {
-		if isValidationError(err) {
-			// Safe to expose validation errors to users
-			api.RespondError(w, http.StatusBadRequest, err.Error())
-		} else {
+		if !ok {
 			// Internal errors - log but don't expose details to prevent information leakage
-			slog.ErrorContext(ctx, "Internal error storing models", "error", err)
+			slog.ErrorContext(ctx, "error storing models", "error", err)
 			api.RespondError(w, http.StatusInternalServerError, "internal server error")
+
+			return
 		}
+
+		// Safe to expose validation errors to users
+		api.RespondError(w, http.StatusBadRequest, err.Error())
 
 		return
 	}
