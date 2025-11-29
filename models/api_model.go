@@ -29,6 +29,6 @@ type APIModel struct {
 }
 
 // Key returns a unique identifier for this API model
-func (m *APIModel) Key() string {
-	return fmt.Sprintf("%s:%s", m.Path, m.Method)
+func Key(path, method string) string {
+	return fmt.Sprintf("%s:%s", path, method)
 }

@@ -38,7 +38,9 @@ func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.models[model.Key()] = model
+	key := models.Key(model.Path, model.Method)
+
+	s.models[key] = model
 
 	slog.InfoContext(ctx, "Model stored", "path", model.Path, "method", model.Method)
 
@@ -65,7 +67,7 @@ func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIM
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	key := path + ":" + method
+	key := models.Key(path, method)
 
 	model, exists := s.models[key]
 	if !exists {
