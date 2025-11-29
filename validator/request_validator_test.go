@@ -83,6 +83,6 @@ func TestRequestValidator_Validate(t *testing.T) {
 		}
 
 		result := validator.Validate(ctx, tRequest, tModel)
-		assert.Equal(t, expectedAnomalousFields, result)
+		assert.ElementsMatch(t, expectedAnomalousFields, result)
 	})
 }
