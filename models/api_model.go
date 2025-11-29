@@ -2,6 +2,18 @@ package models
 
 import "fmt"
 
+// Type constants for parameter validation
+const (
+	TypeString    = "String"
+	TypeInt       = "Int"
+	TypeBoolean   = "Boolean"
+	TypeList      = "List"
+	TypeDate      = "Date"
+	TypeEmail     = "Email"
+	TypeUUID      = "UUID"
+	TypeAuthToken = "Auth-Token"
+)
+
 type Parameter struct {
 	Name     string   `json:"name"`
 	Types    []string `json:"types"`

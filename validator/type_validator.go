@@ -3,6 +3,8 @@ package validator
 import (
 	"fmt"
 	"regexp"
+
+	"anomaly_detector/models"
 )
 
 var (
@@ -19,22 +21,22 @@ var (
 // validateType validates a value against a type name
 func validateType(value any, typeName string) error {
 	switch typeName {
-	case "String":
+	case models.TypeString:
 		_, err := validateString(value)
 		return err
-	case "Int":
+	case models.TypeInt:
 		return validateInt(value)
-	case "Boolean":
+	case models.TypeBoolean:
 		return validateBoolean(value)
-	case "List":
+	case models.TypeList:
 		return validateList(value)
-	case "Date":
+	case models.TypeDate:
 		return validateDate(value)
-	case "Email":
+	case models.TypeEmail:
 		return validateEmail(value)
-	case "UUID":
+	case models.TypeUUID:
 		return validateUUID(value)
-	case "Auth-Token":
+	case models.TypeAuthToken:
 		return validateAuthToken(value)
 	default:
 		return fmt.Errorf("unknown type: %s", typeName)
