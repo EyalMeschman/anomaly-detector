@@ -1,4 +1,4 @@
-package handlers
+package validator
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 
 	"anomaly_detector/models"
 	"anomaly_detector/store"
-	"anomaly_detector/validator"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,30 +17,27 @@ import (
 const (
 	tUsersInfoPath = "/users/info"
 	tValidatePath  = "/validate"
-	tGetMethod     = "GET"
-	tPostMethod    = "POST"
 )
 
 var (
 	tModel = &models.APIModel{
 		Path:   tUsersInfoPath,
-		Method: tGetMethod,
-		QueryParams: []models.Parameter{
-			{Name: "with_extra_data", Types: []string{models.TypeBoolean}, Required: false},
+		Method: http.MethodGet,
+		QueryParams: []*models.Parameter{
+			{Name: "with_extra_data", Types: []models.ParamType{models.TypeBoolean}, Required: false},
 		},
-		Headers: []models.Parameter{
-			{Name: "Authorization", Types: []string{models.TypeAuthToken, models.TypeUUID}, Required: true},
+		Headers: []*models.Parameter{
+			{Name: "Authorization", Types: []models.ParamType{models.TypeAuthToken, models.TypeUUID}, Required: true},
 		},
-		Body: []models.Parameter{},
 	}
 )
 
 func TestValidateRequests(t *testing.T) {
 	// Setup: Create store and add a test model
 	tStoreMock := store.NewMockIModelStore(t)
-	tValidatorMock := validator.NewMockIRequestValidator(t)
+	tValidatorMock := NewMockIRequestValidator(t)
 
-	tHandler := &ValidateHandler{
+	tHandler := &validateHandler{
 		store:     tStoreMock,
 		validator: tValidatorMock,
 	}
@@ -51,40 +47,40 @@ func TestValidateRequests(t *testing.T) {
 
 		request := models.Request{
 			Path:   tUsersInfoPath,
-			Method: tGetMethod,
-			QueryParams: []models.RequestParam{
+			Method: http.MethodGet,
+			QueryParams: []*models.RequestParam{
 				{Name: "with_extra_data", Value: false},
 			},
-			Headers: []models.RequestParam{
+			Headers: []*models.RequestParam{
 				{Name: "Authorization", Value: "Bearer abc123"},
 			},
-			Body: []models.RequestParam{},
 		}
 
 		body, _ := json.Marshal(request)
-		httpRequest := httptest.NewRequest(tPostMethod, tValidatePath, bytes.NewReader(body))
+		httpRequest := httptest.NewRequest(http.MethodPost, tValidatePath, bytes.NewReader(body))
 		tRecorder := httptest.NewRecorder()
 
 		tStoreMock.EXPECT().
-			Get(ctx, tUsersInfoPath, tGetMethod).
+			Get(ctx, tUsersInfoPath, http.MethodGet).
 			Return(tModel, nil).Once()
 
 		tValidatorMock.EXPECT().
 			Validate(ctx, &request, tModel).
-			Return(&models.ValidationResult{
-				IsAnomalous:     false,
-				AnomalousFields: []models.FieldAnomaly{},
-			}).Once()
+			Return(nil).Once()
 
-		tHandler.ValidateRequests(tRecorder, httpRequest)
+		tHandler.Handle(tRecorder, httpRequest)
 
 		assert.Equal(t, http.StatusOK, tRecorder.Code)
 
 		var result models.ValidationResult
 
-		_ = json.NewDecoder(tRecorder.Body).Decode(&result)
-		assert.False(t, result.IsAnomalous)
-		assert.Empty(t, result.AnomalousFields)
+		expectedValidationResult := models.ValidationResult{
+			Valid: true,
+		}
+
+		err := json.NewDecoder(tRecorder.Body).Decode(&result)
+		assert.NoError(t, err)
+		assert.Equal(t, result, expectedValidationResult)
 	})
 
 	t.Run("error when model not found", func(t *testing.T) {
@@ -92,39 +88,41 @@ func TestValidateRequests(t *testing.T) {
 
 		request := models.Request{
 			Path:   "/nonexistent",
-			Method: tGetMethod,
+			Method: http.MethodGet,
 		}
 
 		body, _ := json.Marshal(request)
-		httpRequest := httptest.NewRequest(tPostMethod, tValidatePath, bytes.NewReader(body))
+		httpRequest := httptest.NewRequest(http.MethodPost, tValidatePath, bytes.NewReader(body))
 		tRecorder := httptest.NewRecorder()
 
 		tStoreMock.EXPECT().
-			Get(ctx, "/nonexistent", tGetMethod).
+			Get(ctx, "/nonexistent", http.MethodGet).
 			Return(nil, assert.AnError).Once()
 
-		tHandler.ValidateRequests(tRecorder, httpRequest)
+		tHandler.Handle(tRecorder, httpRequest)
 
 		assert.Equal(t, http.StatusNotFound, tRecorder.Code)
 
 		var response map[string]any
 
-		_ = json.NewDecoder(tRecorder.Body).Decode(&response)
-		assert.Equal(t, "error", response["status"])
+		err := json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.NoError(t, err)
+		assert.Equal(t, "no model found for endpoint GET /nonexistent", response["error"])
 	})
 
 	t.Run("error with invalid JSON", func(t *testing.T) {
 		// Create request with malformed JSON
-		httpRequest := httptest.NewRequest(tPostMethod, tValidatePath, bytes.NewReader([]byte("invalid json")))
+		httpRequest := httptest.NewRequest(http.MethodPost, tValidatePath, bytes.NewReader([]byte("invalid json")))
 		tRecorder := httptest.NewRecorder()
 
-		tHandler.ValidateRequests(tRecorder, httpRequest)
+		tHandler.Handle(tRecorder, httpRequest)
 
 		assert.Equal(t, http.StatusBadRequest, tRecorder.Code)
 
 		var response map[string]any
 
-		_ = json.NewDecoder(tRecorder.Body).Decode(&response)
-		assert.Equal(t, "error", response["status"])
+		err := json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.NoError(t, err)
+		assert.Equal(t, "invalid JSON provided", response["error"])
 	})
 }

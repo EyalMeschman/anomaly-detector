@@ -9,50 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStore(t *testing.T) {
-	t.Run("success storing valid model", func(t *testing.T) {
-		ctx := context.Background()
-		store := NewModelStore()
-		tModel := &models.APIModel{
-			Path:   "/test",
-			Method: "GET",
-		}
-
-		err := store.Store(ctx, tModel)
-		assert.NoError(t, err)
-
-		retrieved, err := store.Get(ctx, "/test", "GET")
-		assert.NoError(t, err)
-		assert.Equal(t, tModel, retrieved)
-	})
-
-	t.Run("error when path is empty", func(t *testing.T) {
-		ctx := context.Background()
-		store := NewModelStore()
-		tModel := &models.APIModel{
-			Path:   "",
-			Method: "GET",
-		}
-
-		err := store.Store(ctx, tModel)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "required")
-	})
-
-	t.Run("error when method is empty", func(t *testing.T) {
-		ctx := context.Background()
-		store := NewModelStore()
-		tModel := &models.APIModel{
-			Path:   "/test",
-			Method: "",
-		}
-
-		err := store.Store(ctx, tModel)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "required")
-	})
-}
-
 func TestGet(t *testing.T) {
 	t.Run("success getting existing model", func(t *testing.T) {
 		ctx := context.Background()
@@ -62,16 +18,15 @@ func TestGet(t *testing.T) {
 			Method: "POST",
 		}
 
-		// Store first
-		err := store.Store(ctx, tModel)
+		// Store first using StoreAll
+		ok, err := store.StoreAll(ctx, []*models.APIModel{tModel})
 		assert.NoError(t, err)
+		assert.True(t, ok)
 
 		// Get it back
 		retrieved, err := store.Get(ctx, "/users", "POST")
 		assert.NoError(t, err)
-		assert.NotNil(t, retrieved)
-		assert.Equal(t, tModel.Path, retrieved.Path)
-		assert.Equal(t, tModel.Method, retrieved.Method)
+		assert.Equal(t, tModel, retrieved)
 	})
 
 	t.Run("error when model not found", func(t *testing.T) {
@@ -81,72 +36,92 @@ func TestGet(t *testing.T) {
 		retrieved, err := store.Get(ctx, "/nonexistent", "GET")
 		assert.Error(t, err)
 		assert.Nil(t, retrieved)
-		assert.Contains(t, err.Error(), "not found")
 	})
 }
 
 func TestStoreAll(t *testing.T) {
+	tModels := []*models.APIModel{
+		{Path: "/users", Method: "GET"},
+		{Path: "/users", Method: "POST"},
+		{Path: "/products", Method: "GET"},
+	}
+
 	t.Run("success storing multiple models", func(t *testing.T) {
 		ctx := context.Background()
 		tStore := NewModelStore()
 
-		tModels := []*models.APIModel{
-			{Path: "/users", Method: "GET"},
-			{Path: "/users", Method: "POST"},
-			{Path: "/products", Method: "GET"},
-		}
-
-		tCount, tErr := tStore.StoreAll(ctx, tModels)
+		ok, tErr := tStore.StoreAll(ctx, tModels)
 
 		assert.NoError(t, tErr)
-		assert.Equal(t, 3, tCount)
-
-		// Verify all models were stored by retrieving them individually
-		_, err := tStore.Get(ctx, "/users", "GET")
-		assert.NoError(t, err)
-
-		_, err = tStore.Get(ctx, "/users", "POST")
-		assert.NoError(t, err)
-
-		_, err = tStore.Get(ctx, "/products", "GET")
-		assert.NoError(t, err)
+		assert.True(t, ok)
 	})
 
-	t.Run("partial success with invalid models", func(t *testing.T) {
-		ctx := context.Background()
-		tStore := NewModelStore()
-
-		tModels := []*models.APIModel{
-			{Path: "/users", Method: "GET"},
-			{Path: "", Method: "POST"}, // Invalid - empty path
-			{Path: "/products", Method: "GET"},
-		}
-
-		tCount, tErr := tStore.StoreAll(ctx, tModels)
-
-		assert.NoError(t, tErr)
-		assert.Equal(t, 2, tCount) // Only 2 valid models stored
-
-		// Verify only valid models were stored
-		_, err := tStore.Get(ctx, "/users", "GET")
-		assert.NoError(t, err)
-
-		_, err = tStore.Get(ctx, "/products", "GET")
-		assert.NoError(t, err)
-		// Invalid model should not be stored
-		_, err = tStore.Get(ctx, "", "POST")
-		assert.Error(t, err)
-	})
-
-	t.Run("empty slice returns zero", func(t *testing.T) {
+	t.Run("empty slice succeeds", func(t *testing.T) {
 		ctx := context.Background()
 		tStore := NewModelStore()
 
 		tModels := []*models.APIModel{}
 
-		tCount, tErr := tStore.StoreAll(ctx, tModels)
+		ok, err := tStore.StoreAll(ctx, tModels)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
 
-		assert.NoError(t, tErr)
-		assert.Equal(t, 0, tCount)
+	t.Run("fail on nil model", func(t *testing.T) {
+		ctx := context.Background()
+		tStore := NewModelStore()
+
+		invalidModels := tModels
+		invalidModels = append(invalidModels, nil) // Nil model
+
+		ok, err := tStore.StoreAll(ctx, invalidModels)
+		assert.Error(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("fail on empty path", func(t *testing.T) {
+		ctx := context.Background()
+		tStore := NewModelStore()
+
+		invalidModels := tModels
+		invalidModels = append(invalidModels, &models.APIModel{Path: "", Method: "POST"})
+
+		ok, err := tStore.StoreAll(ctx, invalidModels)
+		assert.Error(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("fail on empty method", func(t *testing.T) {
+		ctx := context.Background()
+		tStore := NewModelStore()
+
+		invalidModels := tModels
+		invalidModels = append(invalidModels, &models.APIModel{Path: "path", Method: ""})
+
+		ok, err := tStore.StoreAll(ctx, invalidModels)
+		assert.Error(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("fail on duplicate model", func(t *testing.T) {
+		ctx := context.Background()
+		tStore := NewModelStore()
+
+		// Store first batch
+		firstBatch := []*models.APIModel{
+			{Path: "/users", Method: "GET"},
+		}
+		ok, err := tStore.StoreAll(ctx, firstBatch)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+
+		// Try to store duplicate
+		secondBatch := []*models.APIModel{
+			{Path: "/products", Method: "GET"},
+			{Path: "/users", Method: "GET"}, // Duplicate
+		}
+		ok, err = tStore.StoreAll(ctx, secondBatch)
+		assert.Error(t, err)
+		assert.True(t, ok)
 	})
 }

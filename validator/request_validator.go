@@ -4,59 +4,60 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
+	"sync"
 
 	"anomaly_detector/models"
 )
 
+const (
+	cFieldQueryParams = "query_params"
+	cFieldHeaders     = "headers"
+	cFieldBody        = "body"
+)
+
 type IRequestValidator interface {
-	Validate(ctx context.Context, req *models.Request, model *models.APIModel) *models.ValidationResult
+	Validate(ctx context.Context, req *models.Request, model *models.APIModel) []*models.FieldAnomaly
 }
 
-type RequestValidator struct{}
+type requestValidator struct{}
 
 func NewRequestValidator() IRequestValidator {
-	return &RequestValidator{}
+	return &requestValidator{}
 }
 
-func (v *RequestValidator) Validate(
-	ctx context.Context, req *models.Request, model *models.APIModel) *models.ValidationResult {
+func (rv *requestValidator) Validate(
+	ctx context.Context, req *models.Request, model *models.APIModel) []*models.FieldAnomaly {
 	slog.DebugContext(ctx, "Starting request validation",
 		"path", req.Path,
 		"method", req.Method,
 	)
 
-	result := &models.ValidationResult{
-		IsAnomalous:     false,
-		AnomalousFields: []models.FieldAnomaly{},
-	}
+	var (
+		anomalies []*models.FieldAnomaly
+		wg        sync.WaitGroup
+	)
 
-	// Validate query parameters
-	anomalies := v.validateParameters(req.QueryParams, model.QueryParams, "query_params")
-	result.AnomalousFields = append(result.AnomalousFields, anomalies...)
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.QueryParams, model.QueryParams, cFieldQueryParams)...)
+	})
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.Headers, model.Headers, cFieldHeaders)...)
+	})
+	wg.Go(func() {
+		anomalies = append(anomalies, rv.validateParameters(req.Body, model.Body, cFieldBody)...)
+	})
 
-	// Validate headers
-	anomalies = v.validateParameters(req.Headers, model.Headers, "headers")
-	result.AnomalousFields = append(result.AnomalousFields, anomalies...)
+	wg.Wait()
 
-	// Validate body
-	anomalies = v.validateParameters(req.Body, model.Body, "body")
-	result.AnomalousFields = append(result.AnomalousFields, anomalies...)
-
-	// Set anomalous flag if any anomalies found
-	if len(result.AnomalousFields) > 0 {
-		result.IsAnomalous = true
-	}
-
-	return result
+	return anomalies
 }
 
-func (v *RequestValidator) validateParameters(
-	requestParams []models.RequestParam,
-	modelParams []models.Parameter,
-	location string,
-) []models.FieldAnomaly {
-	anomalies := []models.FieldAnomaly{}
+func (rv *requestValidator) validateParameters(
+	requestParams []*models.RequestParam,
+	modelParams []*models.Parameter,
+	field string,
+) []*models.FieldAnomaly {
+	var anomalies []*models.FieldAnomaly
 
 	// Build map of request parameters for quick lookup
 	requestMap := make(map[string]any, len(requestParams))
@@ -64,41 +65,34 @@ func (v *RequestValidator) validateParameters(
 		requestMap[rp.Name] = rp.Value
 	}
 
-	// Validate each model parameter
 	for _, modelParam := range modelParams {
 		value, exists := requestMap[modelParam.Name]
-
-		// Check if required parameter is missing
 		if !exists {
 			if modelParam.Required {
-				anomalies = append(anomalies, models.FieldAnomaly{
-					Location: location,
-					Name:     modelParam.Name,
-					Reason:   "required parameter '" + modelParam.Name + "' is missing",
+				anomalies = append(anomalies, &models.FieldAnomaly{
+					Field:         field,
+					ParameterName: modelParam.Name,
+					Reason:        fmt.Sprintf("required parameter %q is missing", modelParam.Name),
 				})
 			}
 
 			continue
 		}
 
-		// Try to match against any of the allowed types
 		typeMatch := false
 
 		for _, typeName := range modelParam.Types {
-			err := validateType(value, typeName)
-			if err == nil {
+			if validateType(value, typeName) {
 				typeMatch = true
 				break
 			}
 		}
 
-		// If no type matched, add anomaly
 		if !typeMatch {
-			expectedTypes := strings.Join(modelParam.Types, ", ")
-			anomalies = append(anomalies, models.FieldAnomaly{
-				Location: location,
-				Name:     modelParam.Name,
-				Reason:   fmt.Sprintf("type mismatch: expected one of [%s], got %T", expectedTypes, value),
+			anomalies = append(anomalies, &models.FieldAnomaly{
+				Field:         field,
+				ParameterName: modelParam.Name,
+				Reason:        fmt.Sprintf("type mismatch: expected one of %v types, but got the type %T", modelParam.Types, value),
 			})
 		}
 	}

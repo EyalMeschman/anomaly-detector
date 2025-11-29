@@ -10,71 +10,73 @@ import (
 )
 
 type IModelStore interface {
-	Store(ctx context.Context, model *models.APIModel) error
-	StoreAll(ctx context.Context, models []*models.APIModel) (int, error)
+	StoreAll(ctx context.Context, models []*models.APIModel) (bool, error)
 	Get(ctx context.Context, path, method string) (*models.APIModel, error)
 }
 
-type ModelStore struct {
+type modelStore struct {
 	mu     sync.RWMutex
 	models map[string]*models.APIModel
 }
 
 func NewModelStore() IModelStore {
-	return &ModelStore{
+	return &modelStore{
 		models: make(map[string]*models.APIModel),
 	}
 }
 
-func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
-	if model == nil {
-		return fmt.Errorf("model cannot be nil")
-	}
+func (s *modelStore) store(ctx context.Context, apiModel *models.APIModel) {
+	key := getKey(apiModel.Path, apiModel.Method)
 
-	if model.Path == "" || model.Method == "" {
-		return fmt.Errorf("path and method are required")
+	s.models[key] = apiModel
+
+	slog.InfoContext(ctx, "Model stored", "path", apiModel.Path, "method", apiModel.Method)
+}
+
+// StoreAll stores multiple API models and returns a bool indicating whether any error
+// was caused by user input (true) or an internal server error (false).
+// Currently, only user input errors are possible, but this may change in the future to support database storage.
+func (s *modelStore) StoreAll(ctx context.Context, apiModels []*models.APIModel) (bool, error) {
+	for _, model := range apiModels {
+		if model == nil || model.Path == "" || model.Method == "" {
+			return true, fmt.Errorf("invalid model in batch")
+		}
+
+		key := getKey(model.Path, model.Method)
+		if _, exists := s.models[key]; exists {
+			return true, fmt.Errorf("model already exists for path %s and method %s", model.Path, model.Method)
+		}
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := models.Key(model.Path, model.Method)
-
-	s.models[key] = model
-
-	slog.InfoContext(ctx, "Model stored", "path", model.Path, "method", model.Method)
-
-	return nil
-}
-
-func (s *ModelStore) StoreAll(ctx context.Context, models []*models.APIModel) (int, error) {
-	storedCount := 0
-
-	for _, model := range models {
-		if err := s.Store(ctx, model); err != nil {
-			continue
-		}
-
-		storedCount++
+	for _, apiModel := range apiModels {
+		s.store(ctx, apiModel)
 	}
 
-	return storedCount, nil
+	return true, nil
 }
 
-func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIModel, error) {
+func (s *modelStore) Get(ctx context.Context, path, method string) (*models.APIModel, error) {
 	slog.InfoContext(ctx, "Getting model", "path", path, "method", method)
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	key := models.Key(path, method)
+	key := getKey(path, method)
 
 	model, exists := s.models[key]
 	if !exists {
-		return nil, fmt.Errorf("model not found for %s %s", method, path)
+		return nil, fmt.Errorf("model not found for path %s and method %s", path, method)
 	}
 
 	slog.InfoContext(ctx, "Model retrieved", "path", path, "method", method)
 
 	return model, nil
+}
+
+// getKey returns a unique identifier for this API model
+func getKey(path, method string) string {
+	return fmt.Sprintf("%s:%s", path, method)
 }

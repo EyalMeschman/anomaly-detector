@@ -82,70 +82,23 @@ func (_c *MockIModelStore_Get_Call) RunAndReturn(run func(context.Context, strin
 	return _c
 }
 
-// Store provides a mock function with given fields: ctx, model
-func (_m *MockIModelStore) Store(ctx context.Context, model *models.APIModel) error {
-	ret := _m.Called(ctx, model)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Store")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *models.APIModel) error); ok {
-		r0 = rf(ctx, model)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockIModelStore_Store_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Store'
-type MockIModelStore_Store_Call struct {
-	*mock.Call
-}
-
-// Store is a helper method to define mock.On call
-//   - ctx context.Context
-//   - model *models.APIModel
-func (_e *MockIModelStore_Expecter) Store(ctx interface{}, model interface{}) *MockIModelStore_Store_Call {
-	return &MockIModelStore_Store_Call{Call: _e.mock.On("Store", ctx, model)}
-}
-
-func (_c *MockIModelStore_Store_Call) Run(run func(ctx context.Context, model *models.APIModel)) *MockIModelStore_Store_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*models.APIModel))
-	})
-	return _c
-}
-
-func (_c *MockIModelStore_Store_Call) Return(_a0 error) *MockIModelStore_Store_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockIModelStore_Store_Call) RunAndReturn(run func(context.Context, *models.APIModel) error) *MockIModelStore_Store_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // StoreAll provides a mock function with given fields: ctx, _a1
-func (_m *MockIModelStore) StoreAll(ctx context.Context, _a1 []*models.APIModel) (int, error) {
+func (_m *MockIModelStore) StoreAll(ctx context.Context, _a1 []*models.APIModel) (bool, error) {
 	ret := _m.Called(ctx, _a1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for StoreAll")
 	}
 
-	var r0 int
+	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []*models.APIModel) (int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []*models.APIModel) (bool, error)); ok {
 		return rf(ctx, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []*models.APIModel) int); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []*models.APIModel) bool); ok {
 		r0 = rf(ctx, _a1)
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(bool)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, []*models.APIModel) error); ok {
@@ -176,12 +129,12 @@ func (_c *MockIModelStore_StoreAll_Call) Run(run func(ctx context.Context, _a1 [
 	return _c
 }
 
-func (_c *MockIModelStore_StoreAll_Call) Return(_a0 int, _a1 error) *MockIModelStore_StoreAll_Call {
+func (_c *MockIModelStore_StoreAll_Call) Return(_a0 bool, _a1 error) *MockIModelStore_StoreAll_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockIModelStore_StoreAll_Call) RunAndReturn(run func(context.Context, []*models.APIModel) (int, error)) *MockIModelStore_StoreAll_Call {
+func (_c *MockIModelStore_StoreAll_Call) RunAndReturn(run func(context.Context, []*models.APIModel) (bool, error)) *MockIModelStore_StoreAll_Call {
 	_c.Call.Return(run)
 	return _c
 }

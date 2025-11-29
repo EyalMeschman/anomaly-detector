@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"regexp"
 
 	"anomaly_detector/models"
@@ -18,122 +17,52 @@ var (
 	authTokenRegex = regexp.MustCompile(`^Bearer [a-zA-Z0-9]+$`)
 )
 
-// validateType validates a value against a type name
-func validateType(value any, typeName string) error {
-	switch typeName {
-	case models.TypeString:
-		_, err := validateString(value)
-		return err
-	case models.TypeInt:
-		return validateInt(value)
-	case models.TypeBoolean:
-		return validateBoolean(value)
-	case models.TypeList:
-		return validateList(value)
-	case models.TypeDate:
-		return validateDate(value)
-	case models.TypeEmail:
-		return validateEmail(value)
-	case models.TypeUUID:
-		return validateUUID(value)
-	case models.TypeAuthToken:
-		return validateAuthToken(value)
-	default:
-		return fmt.Errorf("unknown type: %s", typeName)
-	}
-}
-
-func validateInt(value any) error {
+func validateType(value any, typeName models.ParamType) bool {
 	switch v := value.(type) {
+	case string:
+		return validateStringType(v, typeName)
+
 	case float64:
 		// JSON unmarshaling converts numbers to float64
-		if v != float64(int(v)) {
-			return fmt.Errorf("value %v is a float, not an integer", v)
+		if typeName != models.TypeInt {
+			return false
 		}
+		// Ensure it's actually an integer
+		return v == float64(int(v))
 
-		return nil
 	case int, int32, int64:
-		// Only happens if developer manually sets ints
-		return nil
-	default:
-		return fmt.Errorf("expected Int, got %T", value)
-	}
-}
+		return typeName == models.TypeInt
 
-func validateString(value any) (string, error) {
-	strValue, ok := value.(string)
-	if !ok {
-		return "", fmt.Errorf("expected String, got %T", value)
-	}
+	case bool:
+		return typeName == models.TypeBoolean
 
-	return strValue, nil
-}
-
-func validateBoolean(value any) error {
-	if _, ok := value.(bool); !ok {
-		return fmt.Errorf("expected Boolean, got %T", value)
-	}
-
-	return nil
-}
-
-func validateList(value any) error {
-	switch value.(type) {
 	case []any, []map[string]any:
-		return nil
+		return typeName == models.TypeList
+
 	default:
-		return fmt.Errorf("expected List, got %T", value)
+		return false
 	}
 }
 
-func validateDate(value any) error {
-	strValue, err := validateString(value)
-	if err != nil {
-		return fmt.Errorf("expected Date string. err: %v", err)
+func validateStringType(value string, typeName models.ParamType) bool {
+	switch typeName {
+	case models.TypeString:
+		return true
+
+	case models.TypeDate:
+		return dateRegex.MatchString(value)
+
+	case models.TypeEmail:
+		return emailRegex.MatchString(value)
+
+	case models.TypeUUID:
+		// We explicitly require UUIDs with dashes (-). If we didn’t, I’d use the official github.com/google/uuid package
+		return uuidRegex.MatchString(value)
+
+	case models.TypeAuthToken:
+		return authTokenRegex.MatchString(value)
+
+	default:
+		return false
 	}
-
-	if !dateRegex.MatchString(strValue) {
-		return fmt.Errorf("invalid date format: %s", strValue)
-	}
-
-	return nil
-}
-
-func validateEmail(value any) error {
-	strValue, err := validateString(value)
-	if err != nil {
-		return fmt.Errorf("expected Email string. err: %v", err)
-	}
-
-	if !emailRegex.MatchString(strValue) {
-		return fmt.Errorf("invalid email format: %s", strValue)
-	}
-
-	return nil
-}
-
-func validateUUID(value any) error {
-	strValue, err := validateString(value)
-	if err != nil {
-		return fmt.Errorf("expected UUID string. err: %v", err)
-	}
-
-	if !uuidRegex.MatchString(strValue) {
-		return fmt.Errorf("invalid UUID format: %s", strValue)
-	}
-
-	return nil
-}
-
-func validateAuthToken(value any) error {
-	strValue, err := validateString(value)
-	if err != nil {
-		return fmt.Errorf("expected Auth-Token string. err: %v", err)
-	}
-
-	if !authTokenRegex.MatchString(strValue) {
-		return fmt.Errorf("invalid Auth-Token format: %s", strValue)
-	}
-
-	return nil
 }
