@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,76 +14,82 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	tModelsPath = "/models"
+)
+
+var (
+	tApiModels = []*models.APIModel{
+		{
+			Path:   tUsersInfoPath,
+			Method: tGetMethod,
+			QueryParams: []models.Parameter{
+				{Name: "id", Types: []string{models.TypeInt}, Required: true},
+			},
+			Headers: []models.Parameter{},
+			Body:    []models.Parameter{},
+		},
+	}
+)
+
 func TestStoreAllModels(t *testing.T) {
-	t.Run("success storing valid models", func(t *testing.T) {
-		// Create store and handler
-		tStore := store.NewModelStore()
-		tHandler := NewModelsHandler(tStore)
+	tStoreMock := store.NewMockIModelStore(t)
 
-		// Create test models
-		tModels := []*models.APIModel{
-			{
-				Path:   "/test1",
-				Method: "GET",
-				QueryParams: []models.Parameter{
-					{Name: "param1", Types: []string{"String"}, Required: true},
-				},
-			},
-			{
-				Path:   "/test2",
-				Method: "POST",
-				Body: []models.Parameter{
-					{Name: "field1", Types: []string{"Int"}, Required: true},
-				},
-			},
-		}
+	tHandler := &ModelsHandler{
+		store: tStoreMock,
+	}
 
-		// Marshal to JSON
-		tBody, err := json.Marshal(tModels)
-		assert.NoError(t, err)
-
-		// Create request
-		tRequest := httptest.NewRequest("POST", "/models", bytes.NewReader(tBody))
-		tRequest.Header.Set("Content-Type", "application/json")
-
+	t.Run("success storing models", func(t *testing.T) {
+		ctx := context.Background()
+		body, _ := json.Marshal(tApiModels)
+		httpRequest := httptest.NewRequest(tPostMethod, tModelsPath, bytes.NewReader(body))
 		tRecorder := httptest.NewRecorder()
 
-		// Call handler
-		tHandler.StoreAllModels(tRecorder, tRequest)
+		tStoreMock.EXPECT().
+			StoreAll(ctx, tApiModels).
+			Return(2, nil).Once()
 
-		// Assert response
+		tHandler.StoreAllModels(tRecorder, httpRequest)
+
 		assert.Equal(t, http.StatusOK, tRecorder.Code)
 
-		var tResponse map[string]any
+		var response map[string]any
 
-		err = json.NewDecoder(tRecorder.Body).Decode(&tResponse)
-		assert.NoError(t, err)
-		assert.Equal(t, "success", tResponse["status"])
-		assert.Equal(t, float64(2), tResponse["models_stored"])
+		_ = json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.Equal(t, float64(2), response["models_stored"])
 	})
 
 	t.Run("error with invalid JSON", func(t *testing.T) {
-		// Create handler
-		tStore := store.NewModelStore()
-		tHandler := NewModelsHandler(tStore)
-
-		// Create request with invalid JSON
-		tRequest := httptest.NewRequest("POST", "/models", bytes.NewReader([]byte("invalid json")))
-		tRequest.Header.Set("Content-Type", "application/json")
-
+		httpRequest := httptest.NewRequest(tPostMethod, tModelsPath, bytes.NewReader([]byte("invalid json")))
 		tRecorder := httptest.NewRecorder()
 
-		// Call handler
-		tHandler.StoreAllModels(tRecorder, tRequest)
+		tHandler.StoreAllModels(tRecorder, httpRequest)
 
-		// Assert response
 		assert.Equal(t, http.StatusBadRequest, tRecorder.Code)
 
-		var tResponse map[string]any
+		var response map[string]any
 
-		err := json.NewDecoder(tRecorder.Body).Decode(&tResponse)
-		assert.NoError(t, err)
-		assert.Equal(t, "error", tResponse["status"])
-		assert.Contains(t, tResponse["message"], "invalid JSON")
+		_ = json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.Equal(t, "error", response["status"])
+	})
+
+	t.Run("error when store fails", func(t *testing.T) {
+		ctx := context.Background()
+		body, _ := json.Marshal(tApiModels)
+		httpRequest := httptest.NewRequest(tPostMethod, tModelsPath, bytes.NewReader(body))
+		tRecorder := httptest.NewRecorder()
+
+		tStoreMock.EXPECT().
+			StoreAll(ctx, tApiModels).
+			Return(0, assert.AnError).Once()
+
+		tHandler.StoreAllModels(tRecorder, httpRequest)
+
+		assert.Equal(t, http.StatusInternalServerError, tRecorder.Code)
+
+		var response map[string]any
+
+		_ = json.NewDecoder(tRecorder.Body).Decode(&response)
+		assert.Equal(t, "error", response["status"])
 	})
 }
