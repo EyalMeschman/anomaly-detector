@@ -23,19 +23,19 @@ func (_m *MockIRequestValidator) EXPECT() *MockIRequestValidator_Expecter {
 }
 
 // Validate provides a mock function with given fields: ctx, req, model
-func (_m *MockIRequestValidator) Validate(ctx context.Context, req *models.Request, model *models.APIModel) *models.ValidationResult {
+func (_m *MockIRequestValidator) Validate(ctx context.Context, req *models.Request, model *models.APIModel) []*models.FieldAnomaly {
 	ret := _m.Called(ctx, req, model)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Validate")
 	}
 
-	var r0 *models.ValidationResult
-	if rf, ok := ret.Get(0).(func(context.Context, *models.Request, *models.APIModel) *models.ValidationResult); ok {
+	var r0 []*models.FieldAnomaly
+	if rf, ok := ret.Get(0).(func(context.Context, *models.Request, *models.APIModel) []*models.FieldAnomaly); ok {
 		r0 = rf(ctx, req, model)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.ValidationResult)
+			r0 = ret.Get(0).([]*models.FieldAnomaly)
 		}
 	}
 
@@ -62,12 +62,12 @@ func (_c *MockIRequestValidator_Validate_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockIRequestValidator_Validate_Call) Return(_a0 *models.ValidationResult) *MockIRequestValidator_Validate_Call {
+func (_c *MockIRequestValidator_Validate_Call) Return(_a0 []*models.FieldAnomaly) *MockIRequestValidator_Validate_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockIRequestValidator_Validate_Call) RunAndReturn(run func(context.Context, *models.Request, *models.APIModel) *models.ValidationResult) *MockIRequestValidator_Validate_Call {
+func (_c *MockIRequestValidator_Validate_Call) RunAndReturn(run func(context.Context, *models.Request, *models.APIModel) []*models.FieldAnomaly) *MockIRequestValidator_Validate_Call {
 	_c.Call.Return(run)
 	return _c
 }

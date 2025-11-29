@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"anomaly_detector/models"
@@ -10,9 +11,7 @@ import (
 )
 
 const (
-	tTestPath   = "/test"
-	tGetMethod  = "GET"
-	tPostMethod = "POST"
+	tTestPath = "/test"
 )
 
 func TestRequestValidator_Validate(t *testing.T) {
@@ -22,31 +21,28 @@ func TestRequestValidator_Validate(t *testing.T) {
 
 		tModel := &models.APIModel{
 			Path:   tTestPath,
-			Method: tGetMethod,
-			QueryParams: []models.Parameter{
-				{Name: "id", Types: []string{models.TypeInt}, Required: true},
+			Method: http.MethodGet,
+			QueryParams: []*models.Parameter{
+				{Name: "id", Types: []models.ParamType{models.TypeInt}, Required: true},
 			},
-			Headers: []models.Parameter{
-				{Name: "Auth", Types: []string{models.TypeString}, Required: true},
+			Headers: []*models.Parameter{
+				{Name: "Auth", Types: []models.ParamType{models.TypeString}, Required: true},
 			},
-			Body: []models.Parameter{},
 		}
 
 		tRequest := &models.Request{
 			Path:   tTestPath,
-			Method: tGetMethod,
-			QueryParams: []models.RequestParam{
+			Method: http.MethodGet,
+			QueryParams: []*models.RequestParam{
 				{Name: "id", Value: float64(123)},
 			},
-			Headers: []models.RequestParam{
+			Headers: []*models.RequestParam{
 				{Name: "Auth", Value: "Bearer token123"},
 			},
-			Body: []models.RequestParam{},
 		}
 
 		result := validator.Validate(ctx, tRequest, tModel)
-		assert.False(t, result.IsAnomalous)
-		assert.Len(t, result.AnomalousFields, 0)
+		assert.Empty(t, result)
 	})
 
 	t.Run("multiple anomalies", func(t *testing.T) {
@@ -55,41 +51,38 @@ func TestRequestValidator_Validate(t *testing.T) {
 
 		tModel := &models.APIModel{
 			Path:   tTestPath,
-			Method: tPostMethod,
-			Headers: []models.Parameter{
-				{Name: "Authorization", Types: []string{models.TypeAuthToken}, Required: true},
+			Method: http.MethodPost,
+			Headers: []*models.Parameter{
+				{Name: "Authorization", Types: []models.ParamType{models.TypeAuthToken}, Required: true},
 			},
-			Body: []models.Parameter{
-				{Name: "id", Types: []string{models.TypeInt}, Required: true},
+			Body: []*models.Parameter{
+				{Name: "id", Types: []models.ParamType{models.TypeInt}, Required: true},
 			},
 		}
 
 		tRequest := &models.Request{
 			Path:    tTestPath,
-			Method:  tPostMethod,
-			Headers: []models.RequestParam{}, // Missing Authorization
-			Body: []models.RequestParam{
+			Method:  http.MethodPost,
+			Headers: []*models.RequestParam{}, // Missing Authorization
+			Body: []*models.RequestParam{
 				{Name: "id", Value: "string value"}, // Expected Int, got String
 			},
 		}
 
-		expectedValidationResult := &models.ValidationResult{
-			IsAnomalous: true,
-			AnomalousFields: []models.FieldAnomaly{
-				{
-					Location: "headers",
-					Name:     "Authorization",
-					Reason:   "required parameter 'Authorization' is missing",
-				},
-				{
-					Location: "body",
-					Name:     "id",
-					Reason:   "type mismatch: expected one of [Int], got string",
-				},
+		expectedAnomalousFields := []*models.FieldAnomaly{
+			{
+				Field:         "headers",
+				ParameterName: "Authorization",
+				Reason:        "required parameter \"Authorization\" is missing",
+			},
+			{
+				Field:         "body",
+				ParameterName: "id",
+				Reason:        "type mismatch: expected one of [Int] types, but got the type string",
 			},
 		}
 
 		result := validator.Validate(ctx, tRequest, tModel)
-		assert.Equal(t, expectedValidationResult, result)
+		assert.Equal(t, expectedAnomalousFields, result)
 	})
 }

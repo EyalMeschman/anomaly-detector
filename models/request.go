@@ -6,9 +6,9 @@ type RequestParam struct {
 }
 
 type Request struct {
-	Path        string         `json:"path"`
-	Method      string         `json:"method"`
-	QueryParams []RequestParam `json:"query_params"`
-	Headers     []RequestParam `json:"headers"`
-	Body        []RequestParam `json:"body"`
+	Path        string          `json:"path"`
+	Method      string          `json:"method"`
+	QueryParams []*RequestParam `json:"query_params"`
+	Headers     []*RequestParam `json:"headers"`
+	Body        []*RequestParam `json:"body"`
 }

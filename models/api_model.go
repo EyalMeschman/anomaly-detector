@@ -1,34 +1,29 @@
 package models
 
-import "fmt"
+type ParamType string
 
 // Type constants for parameter validation
 const (
-	TypeString    = "String"
-	TypeInt       = "Int"
-	TypeBoolean   = "Boolean"
-	TypeList      = "List"
-	TypeDate      = "Date"
-	TypeEmail     = "Email"
-	TypeUUID      = "UUID"
-	TypeAuthToken = "Auth-Token"
+	TypeString    ParamType = "String"
+	TypeInt       ParamType = "Int"
+	TypeBoolean   ParamType = "Boolean"
+	TypeList      ParamType = "List"
+	TypeDate      ParamType = "Date"
+	TypeEmail     ParamType = "Email"
+	TypeUUID      ParamType = "UUID"
+	TypeAuthToken ParamType = "Auth-Token"
 )
 
 type Parameter struct {
-	Name     string   `json:"name"`
-	Types    []string `json:"types"`
-	Required bool     `json:"required"`
+	Name     string      `json:"name"`
+	Types    []ParamType `json:"types"`
+	Required bool        `json:"required"`
 }
 
 type APIModel struct {
-	Path        string      `json:"path"`
-	Method      string      `json:"method"`
-	QueryParams []Parameter `json:"query_params"`
-	Headers     []Parameter `json:"headers"`
-	Body        []Parameter `json:"body"`
-}
-
-// Key returns a unique identifier for this API model
-func Key(path, method string) string {
-	return fmt.Sprintf("%s:%s", path, method)
+	Path        string       `json:"path"`
+	Method      string       `json:"method"`
+	QueryParams []*Parameter `json:"query_params"`
+	Headers     []*Parameter `json:"headers"`
+	Body        []*Parameter `json:"body"`
 }

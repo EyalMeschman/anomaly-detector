@@ -10,8 +10,7 @@ import (
 )
 
 type IModelStore interface {
-	Store(ctx context.Context, model *models.APIModel) error
-	StoreAll(ctx context.Context, models []*models.APIModel) (int, error)
+	StoreAll(ctx context.Context, models []*models.APIModel) error
 	Get(ctx context.Context, path, method string) (*models.APIModel, error)
 }
 
@@ -26,39 +25,38 @@ func NewModelStore() IModelStore {
 	}
 }
 
-func (s *ModelStore) Store(ctx context.Context, model *models.APIModel) error {
-	if model == nil {
-		return fmt.Errorf("model cannot be nil")
-	}
+func (s *ModelStore) store(ctx context.Context, apiModel *models.APIModel) {
+	key := getApiModelKey(apiModel.Path, apiModel.Method)
 
-	if model.Path == "" || model.Method == "" {
-		return fmt.Errorf("path and method are required")
+	s.models[key] = apiModel
+
+	slog.InfoContext(ctx, "Model stored", "path", apiModel.Path, "method", apiModel.Method)
+}
+
+func (s *ModelStore) StoreAll(ctx context.Context, apiModels []*models.APIModel) error {
+	// Validate all first (without locking the whole operation)
+	for _, model := range apiModels {
+		if model == nil || model.Path == "" || model.Method == "" {
+			return &ModelStoreError{ErrType: ErrorInvalidModel}
+		}
+
+		key := getApiModelKey(model.Path, model.Method)
+		if _, exists := s.models[key]; exists {
+			return &ModelStoreError{
+				ErrType:        ErrorDuplicateModel,
+				AdditionalInfo: []string{model.Method, model.Path},
+			}
+		}
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := models.Key(model.Path, model.Method)
-
-	s.models[key] = model
-
-	slog.InfoContext(ctx, "Model stored", "path", model.Path, "method", model.Method)
-
-	return nil
-}
-
-func (s *ModelStore) StoreAll(ctx context.Context, models []*models.APIModel) (int, error) {
-	storedCount := 0
-
-	for _, model := range models {
-		if err := s.Store(ctx, model); err != nil {
-			continue
-		}
-
-		storedCount++
+	for _, apiModel := range apiModels {
+		s.store(ctx, apiModel)
 	}
 
-	return storedCount, nil
+	return nil
 }
 
 func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIModel, error) {
@@ -67,14 +65,22 @@ func (s *ModelStore) Get(ctx context.Context, path, method string) (*models.APIM
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	key := models.Key(path, method)
+	key := getApiModelKey(path, method)
 
 	model, exists := s.models[key]
 	if !exists {
-		return nil, fmt.Errorf("model not found for %s %s", method, path)
+		return nil, &ModelStoreError{
+			ErrType:        ErrorModelNotFound,
+			AdditionalInfo: []string{method, path},
+		}
 	}
 
 	slog.InfoContext(ctx, "Model retrieved", "path", path, "method", method)
 
 	return model, nil
+}
+
+// getApiModelKey returns a unique identifier for this API model
+func getApiModelKey(path, method string) string {
+	return fmt.Sprintf("%s:%s", path, method)
 }
